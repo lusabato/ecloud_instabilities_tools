@@ -20,7 +20,7 @@ betay_vect = [50., 100., 150., 200., 300., 400., 500., 600.]
 fraction_device_quad_vect = [0.07, 0.16, 0.26]
 n_slices_vect = np.array([250., 500., 750., 1000.])
 
-# Simulationd Parameters
+# Simulation Parameters
 n_segments = 16
 PyPICmode_tag = 'Tblocked'
 eMPs = 500000
@@ -44,7 +44,7 @@ sim_died_emittance_growth = 0
 sim_died_beam_losses = 0
 
 # variables needed for the check of number of the turns
-turns_goal = 20000					# change it you need more turns
+turns_goal = 20000                  # change it you need more turns
 sim_died_beam_turns = 0
 findln_opic_first_turn_part = 'first_turn_part ='
 findln_opic_turn = 'Turn '
@@ -52,72 +52,72 @@ findln_opic_turn = 'Turn '
 time_prediction_days = np.zeros((len(n_slices_vect),len(betax_vect),len(fraction_device_quad_vect)))
 for kk, fraction_device_quad in enumerate(fraction_device_quad_vect):
 
-	for jj, betax, betay in zip(range(len(betax_vect)), betax_vect, betay_vect):
+    for jj, betax, betay in zip(range(len(betax_vect)), betax_vect, betay_vect):
 
-		for ii, n_slices in enumerate(n_slices_vect):
-		
-			folder_curr_sim = sim_folder + 'transverse_grid_%s_betaxy_%.0fm_length%.2f_slices_%d'%(PyPICmode_tag, betax,fraction_device_quad,n_slices)                       
-			writing_lines = writing_lines + ['\n\n%s\n'%folder_curr_sim]
-			writing_lines = writing_lines + ['%1.f s/Turn.\n'%time_per_turn_seconds[ii,jj,kk]]
+        for ii, n_slices in enumerate(n_slices_vect):
+        
+            folder_curr_sim = sim_folder + 'transverse_grid_%s_betaxy_%.0fm_length%.2f_slices_%d'%(PyPICmode_tag, betax,fraction_device_quad,n_slices)                       
+            writing_lines = writing_lines + ['\n\n%s\n'%folder_curr_sim]
+            writing_lines = writing_lines + ['%1.f s/Turn.\n'%time_per_turn_seconds[ii,jj,kk]]
 
-	# 2.1 check if the simulation died for emittance growth		
-			file_opic = folder_curr_sim + '/opic.txt'
-			emittance_growth_text = os.system('grep "Stop simulation due to emittance growth." %s'%file_opic)
-			if emittance_growth_text == 512:
-				print 'ERROR, No such file or directory: ' + folder
-		
-			if emittance_growth_text == 0:
-				print folder_curr_sim + '\n'
-				writing_lines = writing_lines + ['Stop simulation due to emittance growth.\n']				
-				sim_died_emittance_growth = sim_died_emittance_growth + 1
+    # 2.1 check if the simulation died for emittance growth     
+            file_opic = folder_curr_sim + '/opic.txt'
+            emittance_growth_text = os.system('grep "Stop simulation due to emittance growth." %s'%file_opic)
+            if emittance_growth_text == 512:
+                print 'ERROR, No such file or directory: ' + folder
+        
+            if emittance_growth_text == 0:
+                print folder_curr_sim + '\n'
+                writing_lines = writing_lines + ['Stop simulation due to emittance growth.\n']              
+                sim_died_emittance_growth = sim_died_emittance_growth + 1
 
-			if emittance_growth_text == 256:		#simulation didn't die for emittance growth
-	
-	# 2.2 check if the simulation died for beam losses
-				losses = os.system('grep "Stop simulation due to beam losses." %s'%file_opic)
-				if losses == 512:
-					print 'ERROR, No such file or directory: ' + folder
-		
-				if losses == 0:
-					print folder_curr_sim + '\n'
-					writing_lines = writing_lines + ['Stop simulation due to losses.\n']
-					sim_died_beam_losses = sim_died_beam_losses + 1
+            if emittance_growth_text == 256:        #simulation didn't die for emittance growth
+    
+    # 2.2 check if the simulation died for beam losses
+                losses = os.system('grep "Stop simulation due to beam losses." %s'%file_opic)
+                if losses == 512:
+                    print 'ERROR, No such file or directory: ' + folder
+        
+                if losses == 0:
+                    print folder_curr_sim + '\n'
+                    writing_lines = writing_lines + ['Stop simulation due to losses.\n']
+                    sim_died_beam_losses = sim_died_beam_losses + 1
 
-				if losses == 256:		#simulation didn't die for beam losses
-				
-	# 2.3 check if the simulation died because reach the number of turns
-					with open(file_opic, 'r') as fid:
-						lines_opic = fid.readlines()
-										
-					pos_opic_first_turn_part = None
-					pos_opic_turn = None
-					for ii_opic, line in enumerate(lines_opic):
-						if findln_opic_first_turn_part in line:
-							pos_opic_first_turn_part = ii_opic
-							
-					for ii_opic, line in enumerate(lines_opic):
-						if findln_opic_turn in line:
-							pos_opic_turn = ii_opic							
-				
-					if (pos_opic_first_turn_part is not None) and (pos_opic_turn is not None):
-						
-						first_turn_part = int((lines_opic[pos_opic_first_turn_part].split('= ')[1]).split('\n')[0])
-						turns = int((lines_opic[pos_opic_turn].split(',')[0]).split(' ')[1])
-						total_turns = first_turn_part + turns + 1
-						
-						if total_turns > turns_goal:
-							print '\n' + 'Stop simulation: reached the number of turns.\n' + folder_curr_sim + '\n'
-							writing_lines = writing_lines + ['Stop simulation: reached the number of turns.\n']					
-							sim_died_beam_turns = sim_died_beam_turns + 1
-						
-						else:
-							writing_lines = writing_lines + ['Simulation not finished. %d turns done.\n'%total_turns]
-							turns_left = turns_goal - total_turns
-							time_prediction_days[ii,jj,kk] = (turns_left * time_per_turn_seconds[ii,jj,kk])/(60*60*24)
-							writing_lines = writing_lines + ['%1.f days are needed to complete %d turns.\n'%(time_prediction_days[ii,jj,kk], turns_goal)]
-					
-					else:
-						writing_lines = writing_lines + ['Simulation not started.\n']
+                if losses == 256:       #simulation didn't die for beam losses
+                
+    # 2.3 check if the simulation died because reach the number of turns
+                    with open(file_opic, 'r') as fid:
+                        lines_opic = fid.readlines()
+                                        
+                    pos_opic_first_turn_part = None
+                    pos_opic_turn = None
+                    for ii_opic, line in enumerate(lines_opic):
+                        if findln_opic_first_turn_part in line:
+                            pos_opic_first_turn_part = ii_opic
+                            
+                    for ii_opic, line in enumerate(lines_opic):
+                        if findln_opic_turn in line:
+                            pos_opic_turn = ii_opic                         
+                
+                    if (pos_opic_first_turn_part is not None) and (pos_opic_turn is not None):
+                        
+                        first_turn_part = int((lines_opic[pos_opic_first_turn_part].split('= ')[1]).split('\n')[0])
+                        turns = int((lines_opic[pos_opic_turn].split(',')[0]).split(' ')[1])
+                        total_turns = first_turn_part + turns + 1
+                        
+                        if total_turns > turns_goal:
+                            print '\n' + 'Stop simulation: reached the number of turns.\n' + folder_curr_sim + '\n'
+                            writing_lines = writing_lines + ['Stop simulation: reached the number of turns.\n']                 
+                            sim_died_beam_turns = sim_died_beam_turns + 1
+                        
+                        else:
+                            writing_lines = writing_lines + ['Simulation not finished. %d turns done.\n'%total_turns]
+                            turns_left = turns_goal - total_turns
+                            time_prediction_days[ii,jj,kk] = (turns_left * time_per_turn_seconds[ii,jj,kk])/(60*60*24)
+                            writing_lines = writing_lines + ['%1.f days are needed to complete %d turns.\n'%(time_prediction_days[ii,jj,kk], turns_goal)]
+                    
+                    else:
+                        writing_lines = writing_lines + ['Simulation not started.\n']
 
 
 
@@ -135,7 +135,7 @@ time_per_turn_average_seconds = np.mean(time_per_turn_seconds)
 writing_lines = writing_lines + ['The average time per turn is: %.1f s.\n'%(time_per_turn_average_seconds)]
 
 with open(folder_work + 'computational_time.txt', 'w') as fid:
-	fid.writelines(writing_lines)
+    fid.writelines(writing_lines)
 
 
 
@@ -146,12 +146,12 @@ computational_time_seconds_nslices = np.zeros(len(n_slices_vect))
 N_turns_done_nslices = np.zeros(len(n_slices_vect))
 for kk, fraction_device_quad in enumerate(fraction_device_quad_vect):
 
-	for jj, betax, betay in zip(range(len(betax_vect)), betax_vect, betay_vect):
+    for jj, betax, betay in zip(range(len(betax_vect)), betax_vect, betay_vect):
 
-		for ii, n_slices in enumerate(n_slices_vect):
+        for ii, n_slices in enumerate(n_slices_vect):
 
-			computational_time_seconds_nslices[ii] = computational_time_seconds_nslices[ii] + computational_time_seconds[ii,jj,kk]
-			N_turns_done_nslices[ii] = N_turns_done_nslices[ii] + N_turns_done[ii,jj,kk]
+            computational_time_seconds_nslices[ii] = computational_time_seconds_nslices[ii] + computational_time_seconds[ii,jj,kk]
+            N_turns_done_nslices[ii] = N_turns_done_nslices[ii] + N_turns_done[ii,jj,kk]
 
 time_per_turn_seconds_nslice = computational_time_seconds_nslices/N_turns_done_nslices
 
